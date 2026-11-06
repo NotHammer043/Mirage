@@ -319,3 +319,4 @@ Fabric API is declared as a dependency in `fabric.mod.json` with `*` version, me
 ---
 
 *Mirage — TofuMC · Minecraft 1.21.11 · Fabric*
+
