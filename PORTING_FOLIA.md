@@ -1,31 +1,22 @@
-# Folia Porting Notes
+# Folia Synchronization Design
 
-## Current status
+Mirage no longer accesses Minecraft server internals or live `.mca` files.
 
-The Fabric entry point, client code, mixins, and direct Minecraft server internals have been removed. Mirage is now a standard Paperweight/Folia plugin, and its remaining command and configuration paths use the Bukkit plugin API.
+## Chunk transfer
 
-Live synchronization is intentionally disabled. The former implementation depended on operations that cannot be made safe by replacing a server-wide executor with a Folia scheduler:
+1. The mirror requests one named world and chunk coordinate over an authenticated TCP connection.
+2. The main server resolves the world on the global region scheduler and loads the already-generated chunk asynchronously.
+3. The source chunk's owning region creates a Bukkit `ChunkSnapshot`. Snapshot encoding runs off-thread; `ChunkSnapshot` is documented as immutable and thread-safe.
+4. The mirror resolves its world on the global region scheduler and loads or generates the destination chunk asynchronously.
+5. The destination chunk's owning region validates the snapshot and applies block states and biomes.
 
-- Saving or flushing every world from one task.
-- Closing region-file caches and replacing `.mca` files while regions may still be ticking or loading chunks.
-- Mutating chunk sections and player connections through server internals.
-- Enumerating or modifying entities and chunks outside their owning region or entity scheduler.
+No region task waits for another region, socket, or disk operation. Network workers wait only on the source snapshot future, never on a server tick thread. Requests and worker queues are bounded.
 
-Folia schedulers provide ownership for individual regions, entities, and global tasks; they do not provide a safe global lock for replacing a world's region files. Do not re-enable live sync by scheduling the old file operations on a global or arbitrary region scheduler.
+## Intentional limitations
 
-## Safe surfaces
+- Transfers are one chunk at a time; whole-world region-file replacement is not available through a safe Folia API.
+- Entities, block entities, scheduled ticks, and other world metadata are not copied.
+- Source chunks with block entities are rejected. Existing destination chunks with block entities are left unchanged and rejected.
+- Both servers must have matching world names, height ranges, Minecraft versions, and compatible block/biome registries.
 
-- Plugin enable/disable, configuration loading, command registration, and status reporting.
-- Reloading the plugin's own configuration file.
-- Reporting that sync and pull are unavailable.
-
-## Requirements
-
-- Folia server
-- Java 21 or newer
-
-## Build
-
-```shell
-./gradlew build
-```
+Do not bypass these checks or reintroduce raw region-file replacement. Extending the copied data requires a separate region-owned, public-API transfer design for each additional data type.

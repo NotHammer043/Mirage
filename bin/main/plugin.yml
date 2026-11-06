@@ -1,0 +1,14 @@
+name: Mirage
+version: '${version}'
+main: xyz.tofumc.Mirage
+api-version: '1.21'
+folia-supported: true
+commands:
+  mirage:
+    description: Copies chunks safely between Folia servers and manages Mirage.
+    usage: /mirage <sync|pull|status|reload> [world chunkX chunkZ]
+    permission: mirage.command
+permissions:
+  mirage.command:
+    description: Allows use of Mirage commands.
+    default: op
