@@ -2,6 +2,7 @@ package xyz.tofumc.mirage.config;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonParseException;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -24,7 +25,14 @@ public class ConfigManager {
         }
 
         String json = Files.readString(configPath);
-        config = GSON.fromJson(json, MirageConfig.class);
+        try {
+            config = GSON.fromJson(json, MirageConfig.class);
+        } catch (JsonParseException e) {
+            throw new IOException("Invalid Mirage configuration at " + configPath, e);
+        }
+        if (config == null) {
+            throw new IOException("Mirage configuration is empty: " + configPath);
+        }
         return config;
     }
 
